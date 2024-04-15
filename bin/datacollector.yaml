@@ -1,0 +1,66 @@
+id: datacollector_9        #服务的唯一id 在集群服务下不能重复即可 建议配置文件名与服务id一致
+ip: 172.20.27.999          #运行主机Ip 集群通信中 按ip节点通行的查询字段 此字段可以注释掉 注释后取当前运行主机公网ip地址
+tag: datacollector         #服务集群标签 相同标签 且sys.registry 和 sys.rpc 配置一致 即可互相发现和通信
+type: datacollector        #服务类型 相同服务类型相同 如 多个login 服务 相同服务多开 服务类型一致
+category: BusinessService  #服务类别 例如 网关服务器 或者 游戏服务器 以及普通业务服务器
+version: 1.0               #服务版本 多服务器相同的服务类型 高版本比低版本拥有更高的访问优先级 使用场景 热更新机制
+
+comps:  
+  DataSyncInfoPushComp:    #ETL日志上报组件
+    IsOpen: true          #是否开启   
+    Mysql_addr: "root:Idss@sjzt2021@tcp(172.20.27.126:3306)/dmp"
+    Mysql_table: "data_syn_log"
+    DataSyncInfoPush_addr: "http://172.20.27.143:8713/dataSynTask/changeStatus"
+sys:
+  #日志系统  基础系统 每个服务默认启动
+  log:
+    FileName: ./log/datacollector_9.log        #日志保存路径
+    Loglayer: 2                                #日志打印层级 DebugLevel:0 InfoLevel:1 WarnLevel:2 ErrorLevel:3
+    Loglevel: 0                                #日志输出级别
+    Debugmode: true                            #是否开启debug模式 是否输出debug日志以及输出到终端
+    Encoder: 0                                 #日志输出痒死 0 格式化使出 1 json样式输出
+  
+  # 注册表系统 集群服务基础系统 集群服务默认启动
+  registry:
+    RegistryType: 1                            #0:Consul 1:Nacos
+    Nacos_NamespaceId: 0ed54434-9454-4b0d-86aa-74888d8c1c65    #Nacos 的 Namespace    在RegistryType= Nacos 时生效
+    Nacos_NacosAddr: 172.20.27.145            #Nacos 服务地址    在RegistryType= Nacos 时生效
+    Nacos_Port: 10005                          #Nacos 服务端口    在RegistryType= Nacos 时生效
+    Nacos_BeatInterval: 5000                   #Nacos 心跳间隔时间 单位毫秒
+    Nacos_RegisterTTL: 8                       #Nacos 主动上报服务信息间隔 单位秒
+    Consul_Addr: "172.20.27.145:11003"         #Consul 服务地址   在RegistryType= Consul 时生效
+
+  # rpc通信系统 集群服务基础系统 集群服务默认启动
+  rpc:
+    RPCConnType: 1                             #消息组件的类型 0 nats 1 kafka
+    RpcExpired: 120                            #rpc超时时长
+    Nats_Addr: "nats://172.20.27.145:10004"    #Nats服务地址 在RPCConnType= nats 时生效
+    Kafka_Host: ["172.20.27.126:9092","172.20.27.127:9092","172.20.27.128:9092"]  #kafka服务地址 在RPCConnType= kafka 时生效
+    Kafka_Version: "2.1.1"
+  
+  # DataCollector 服务 依赖数据管理系统 用于任务数据的存储管理
+  db:
+    RedisUrl: "172.20.27.145:10001"                 #redis 的地址 ipv6连接eg： tcp6 "[fe80::20c:29ff:fe36:95a5%ens192]:6379"
+    RedisDB: 1                                     #数据存储区
+    RedisPassword: "li13451234"                     #登陆密码
+    MongodbUrl: "mongodb://172.20.27.145:10002"    #废弃
+    MongodbDatabase: "datacollector"               #废弃
+    RInfoExpiration: 120                           #任务运行状态过期时间 单位秒
+    RStatisticsExpiration: 604800                  #任务统计数据过期时间 单位秒
+
+  # DataCollector 服务 依赖nacos配置管理系统 用于同步服务的运行状态数据 提供外部访问
+  nacos:
+    NacosClientType: 1              #naocs 的客户端类型 NamingClient:0  ConfigClient:1 All:2
+    NacosAddr: "172.20.27.145"      #nacos 地址
+    Port: 10005                      #nacos 端口
+    DataId: "datacollector"         #nacos 配置文件名
+    Group: "dev"                    #nacos 配置文件组
+
+modules:
+  SM_DataCollectorModule:
+    ListenPort: 9191                                 #web端口
+    SignKey: "@88199%67g12q4*67m12#4l67!"            #签名密钥 长度 24 对称加密需要固定长度密钥
+    IsAutoStartRunner: false                         #是否自动拉起采集器
+    ScanNoStartRunnerInterval: "0 */10 * * * ?"      #定时检查任务状态
+    RinfoSyncInterval: "0 */1 * * * ?"               #任务运行状态保活间隔时间
+    RStatisticInterval: "59 59 * * * ?"              #任务数据统计间隔时间

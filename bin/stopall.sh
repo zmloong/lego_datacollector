@@ -1,0 +1,1 @@
+kill -9 `ps -ef | grep datacollector | grep -v 'grep --color=auto datacollector' | awk '{print $2}'`

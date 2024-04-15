@@ -1,0 +1,14 @@
+version: "3.7"
+
+# 服务
+services:
+  go_datacollector:
+      image: centos:7
+      container_name: go_datacollector
+      network_mode: host
+      environment:
+        - TZ=Asia/Shanghai
+      volumes:
+        - ../:/usr/local/go_datacollector
+      working_dir: /usr/local/go_datacollector
+      entrypoint: ["./datacollector", "-conf", "./conf/datacollector.toml"]
